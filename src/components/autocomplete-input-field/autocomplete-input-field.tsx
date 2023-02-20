@@ -85,3 +85,5 @@ const CountryList = ({ countries, onClick }) => {
     </ul>
   );
 };
+
+// inspired from https://svarden.se/post/debounced-fetch-with-abort-controller
