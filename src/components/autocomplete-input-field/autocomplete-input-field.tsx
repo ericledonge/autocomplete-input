@@ -22,6 +22,7 @@ export const AutoCompleteInputField = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const debouncedFetchCountries = async (searchTerm: string) => {
+    setIsLoading(true);
     setSearchTerm(searchTerm);
     clearTimeout(debounceTimer.current);
 
@@ -33,7 +34,7 @@ export const AutoCompleteInputField = () => {
 
       try {
         if (searchTerm) {
-          setIsLoading(true);
+          // setIsLoading(true); // or here, depend on our needs
           const countries = await fetchCountries(searchTerm, {
             signal: controller.current.signal,
           });
