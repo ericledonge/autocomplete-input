@@ -1,46 +1,53 @@
 import "./autocomplete-input-field.css";
 
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 
 const URL = "https://restcountries.com/v3.1/name/";
+const DEBOUNCE_DELAY = 1000;
+
+const fetchCountries = async (searchTerm: string, fetchOptions = {}) => {
+  const response = await fetch(`${URL}${searchTerm}`, {
+    method: "GET",
+    ...fetchOptions,
+  });
+  return response.json();
+};
 
 export const AutoCompleteInputField = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [countries, setCountries] = useState([]);
+  const debounceTimer = useRef(0);
+  const controller = useRef();
 
-  const fetchCountries = async (searchTerm: string) => {
-    const response = await fetch(`${URL}${searchTerm}`);
-    return response.json();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [countries, setCountries] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const debouncedFetchCountries = async (searchTerm: string) => {
+    setSearchTerm(searchTerm);
+    clearTimeout(debounceTimer.current);
+
+    controller.current?.abort();
+    controller.current = new AbortController();
+
+    debounceTimer.current = setTimeout(async () => {
+      setCountries([]);
+
+      try {
+        if (searchTerm) {
+          setIsLoading(true);
+          const countries = await fetchCountries(searchTerm, {
+            signal: controller.current.signal,
+          });
+          setCountries(countries);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }, DEBOUNCE_DELAY);
   };
 
   const handleCountryClick = (countryName) => {
     alert(countryName);
   };
-
-  useEffect(() => {
-    if (searchTerm) {
-      const controller = new AbortController();
-      setIsLoading(true);
-      fetchCountries(searchTerm)
-        .then((data) => setCountries(data))
-        .finally(() => setIsLoading(false));
-
-      return () => controller.abort();
-    }
-  }, [searchTerm]);
-
-  // useEffect(() => {
-  //   const timer = setTimeout(() => {
-  //     if (searchTerm) {
-  //       fetchCountryNames(searchTerm).then((data) => {
-  //         console.log(data);
-  //         setData(data);
-  //       });
-  //     }
-  //   }, 500);
-  //   return () => clearTimeout(timer);
-  // }, [searchTerm]);
 
   return (
     <>
@@ -49,7 +56,7 @@ export const AutoCompleteInputField = () => {
           name="search"
           type="text"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => debouncedFetchCountries(e.target.value)}
         />
         <div className={isLoading ? "loading-spinner" : null}></div>
       </label>
